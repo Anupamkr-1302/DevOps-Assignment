@@ -55,3 +55,13 @@ jobs:
         IMAGE_TAG=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO_FRONTEND }}:${{ github.sha }}
         docker build -t $IMAGE_TAG .
         docker push $IMAGE_TAG
+
+    - name: 🧪 Backend Tests
+      working-directory: ./backend
+      run: |
+       python -m venv venv
+       source venv/bin/activate
+       pip install --upgrade pip
+       pip install -r requirements.txt
+       pytest
+
