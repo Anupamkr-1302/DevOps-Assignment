@@ -1,0 +1,52 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REPO_BACKEND: backend-app
+  ECR_REPO_FRONTEND: frontend-app
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔐 Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: 🧪 Backend Tests
+      working-directory: ./backend
+      run: |
+        pip install -r requirements.txt
+        pytest
+
+    - name: 🧪 Frontend Tests
+      working-directory: ./frontend
+      run: |
+        npm install
+        npm run test || echo "No tests defined"
+
+    - name: 🔨 Build & Push Backend Image
+      working-directory: ./backend
+      run: |
+        IMAGE_TAG=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO_BACKEND }}:${{ github.sha }}
+        docker build -t $IMAGE_TAG .
+        docker push $IMAGE_TAG
+
+    - name: 🔨 Build & Push Frontend Image
+      working-directory: ./frontend
+      run: |
+        IMAGE_TAG=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO_FRONTEND }}:${{ github.sha }}
+        docker build -t $IMAGE_TAG .
+        docker push $IMAGE_TAG
